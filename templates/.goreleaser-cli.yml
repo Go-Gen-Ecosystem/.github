@@ -1,0 +1,56 @@
+# GoReleaser template for CLI modules (go-gen, go-migrate).
+# Copy to <module>/.goreleaser.yml and set project/binary names + main path.
+#
+# @author Admilson B. F. Cossa
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod verify
+    - go test ./...
+
+builds:
+  - id: cli
+    main: ./cmd/CHANGEME
+    binary: CHANGEME
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Other Changes
+      order: 999
+  filters:
+    exclude:
+      - "^test:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+release:
+  draft: false
+  prerelease: auto

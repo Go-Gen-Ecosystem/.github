@@ -1,0 +1,88 @@
+# Reusable CI for all go-gen-ecosystem modules.
+# Called from each module repo via:
+#   uses: go-gen-ecosystem/.github/.github/workflows/reusable-go-ci.yml@main
+#
+# @author Admilson B. F. Cossa
+name: Reusable Go CI
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      coverage-threshold:
+        description: Minimum total test coverage percentage (fails under)
+        required: false
+        type: number
+        default: 70
+      run-race:
+        description: Run tests with the race detector
+        required: false
+        type: boolean
+        default: true
+      go-version:
+        description: Go toolchain version
+        required: false
+        type: string
+        default: stable
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ inputs.go-version }}
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
+        with:
+          version: latest
+
+  vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: off
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ inputs.go-version }}
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  test:
+    name: Build & Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GOWORK: off
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ inputs.go-version }}
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        run: go build ./...
+      - name: Test
+        shell: bash
+        run: |
+          RACE=""
+          if [ "${{ inputs.run-race }}" = "true" ]; then RACE="-race"; fi
+          go test ./... $RACE -count=1 -covermode=atomic -coverprofile=cover.out
+      - name: Coverage gate (>= ${{ inputs.coverage-threshold }}%)
+        shell: bash
+        run: |
+          total=$(go tool cover -func=cover.out | tail -1 | awk '{gsub(/%/, "", $3); print $3}')
+          echo "Total coverage: ${total}% (threshold: ${{ inputs.coverage-threshold }}%)"
+          awk -v t="$total" -v min="${{ inputs.coverage-threshold }}" 'BEGIN { exit (t+0 < min+0) ? 1 : 0 }'
