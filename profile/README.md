@@ -5,7 +5,7 @@ A modular Go development toolkit: focused, standalone modules that work together
 | Module | Purpose |
 |---|---|
 | [halolog](https://github.com/go-gen-ecosystem/halolog) | Zero-allocation structured logging — 0 allocs/op on the hot path, guarded by committed tests; ships `halologgen`, a schema-to-facade generator with byte-diff-verified determinism |
-| go-migrate | Database migrations: Go-native, single-binary Flyway alternative — CLI and embeddable library |
+| [go-migrate](https://github.com/Go-Gen-Ecosystem/go-migrate) | Database migrations: Go-native, single-binary Flyway alternative — CLI and embeddable library |
 | go-gen-observer | Observability: Prometheus metrics, OpenTelemetry tracing, health checks |
 | go-gen-resilience | Resilience patterns: circuit breaker, retry, timeout, bulkhead, rate limiting, caching |
 | go-gen-security | Security primitives: encryption, hashing, signing, sanitization, CORS |
